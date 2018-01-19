@@ -1,0 +1,127 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap -->
+    <link th:href="@{/webJarsLocator/bootstrap/css/bootstrap.min.css}" rel="stylesheet" type="text/css"/>
+    <!-- font-awesome -->
+    <link th:href="@{/webJarsLocator/font-awesome/css/font-awesome.min.css}" rel="stylesheet" type="text/css"/>
+    <!-- DataTables CSS -->
+    <link th:href="@{/webJarsLocator/datatables/css/dataTables.bootstrap.min.css}" rel="stylesheet" type="text/css"/>
+    <!-- ztree -->
+    <link th:href="@{/webJarsLocator/zTree/css/metroStyle/metroStyle.css}" rel="stylesheet" type="text/css"/>
+    <!-- bootstrap file upload -->
+    <link th:href="@{/webJarsLocator/bootstrap-fileinput/css/fileinput.min.css}" rel="stylesheet" type="text/css"/>
+    <!-- Daterangepicker -->
+    <link th:href="@{/webJarsLocator/bootstrap-daterangepicker/daterangepicker.css}" rel="stylesheet" type="text/css"/>
+    <!--common.css-->
+    <link th:href="@{/res/common.css}" rel="stylesheet" />
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script th:src="@{/webJarsLocator/jquery/jquery.min.js}" type="text/javascript" charset="utf8" ></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script th:src="@{/webJarsLocator/bootstrap/js/bootstrap.min.js}" type="text/javascript" charset="utf8" ></script>
+    <!-- DataTables -->
+    <script th:src="@{/webJarsLocator/datatables/js/jquery.dataTables.min.js}"  type="text/javascript" charset="utf8" ></script>
+    <script th:src="@{/webJarsLocator/datatables/js/dataTables.bootstrap.min.js}" type="text/javascript" charset="utf8" ></script>
+    <!-- ztree -->
+    <script th:src="@{/webJarsLocator/zTree/js/jquery.ztree.all.min.js}"  type="text/javascript" charset="utf8" ></script>
+    <!-- bootstrap file upload -->
+    <script th:src="@{/webJarsLocator/bootstrap-fileinput/js/fileinput.min.js}" type="text/javascript" charset="utf8" ></script>
+    <script th:src="@{/webJarsLocator/bootstrap-fileinput/js/fileinput_locale_zh.js}"  type="text/javascript" charset="utf8" ></script>
+    <!-- Daterangepicker -->
+    <script th:src="@{/webJarsLocator/moment/min/moment-with-locales.min.js}" type="text/javascript" charset="utf8" ></script>
+    <script th:src="@{/webJarsLocator/bootstrap-daterangepicker/daterangepicker.js}"  type="text/javascript" charset="utf8" ></script>
+
+
+    <script th:src="@{/js/nav.js}" type="text/javascript" charset="utf8" ></script>
+    <script th:src="@{/res/common.js}" type="text/javascript" charset="utf8" ></script>
+    <script th:inline="javascript">
+        _csrf = {
+            parameterName: [[${_csrf.parameterName}]],
+            token: [[${_csrf.token}]]
+        }
+    </script>
+</head>
+<body>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="javascript:">
+                <img th:src="@{/img/asiainfo.png}" alt="亚信科技" width="25em" height="25em">
+            </a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <ul class="nav navbar-nav">
+            <li><a href="#">首页</a></li>
+            <li><a th:href="@{/}">文档系统 <span class="sr-only">(current)</span></a></li>
+            <li class="dropdown ">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">问题系统<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a th:href="@{/bug/bugManager}">问题管理</a></li>
+                    <li><a href="#">*****</a></li>
+                </ul>
+            </li>
+        </ul>
+        <ul class="nav navbar-nav navbar-right">
+            <li>
+                <a th:text="'欢迎您【' + ${#authentication.name} + '】'"></a>
+            </li>
+            <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">其它<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    <li><a href="#">权限管理</a></li>
+                    <li><a href="javascript:document.getElementById('logoutForm').submit();" >登出</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div th:include="this::context"></div>
+
+<footer class="footer">
+    <p>友情链接：<a href="http://112.25.233.117:58080/OnlineServer" target="_blank">DMP</a>、<a href="#">webmall-test</a>、<a href="#">admin-test</a></p>
+    <p>所属： 亚信B2B终端项目组</p>
+</footer>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="msg" data-backdrop="static">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">提示</h4>
+            </div>
+            <div class="modal-body" id="msg_context" th:text="${session.msg}">
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+<script type="text/javascript" charset="utf8">
+    Messager = {
+        modalDiv:jQuery('#msg'),
+        showMsg:function(msg){
+            $('#msg_context').html(msg);
+            this.modalDiv.modal('show');
+        },
+        showModal:function(){
+            this.modalDiv.modal('show');
+        }
+    };
+    /**
+     * 菜单激活
+     */
+    activeNav(document.title);
+</script>
+
+<div th:if="${!#strings.isEmpty(session.msg)}">
+    <script type="text/javascript" charset="utf8">
+        Messager.showModal();
+    </script>
+    <div th:data="${#httpSession.removeAttribute('msg')}"></div>
+</div>
+
+<form th:action="@{/logout}" id="logoutForm" method="post"></form>
+</body>
+</html>

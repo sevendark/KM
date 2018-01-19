@@ -1,0 +1,15 @@
+.footer {
+    float: left;
+    width: 100%;
+    border-top: 1px solid #ddd;
+    background-color: #ebedf4;
+    padding: 3em;
+    margin-top: 2em;
+}
+/*修复dateragepicker的显示过大bug*/
+.daterangepicker .calendar th, .daterangepicker .calendar td {
+    min-width: 10px;
+}
+xmp{
+    display: inline;
+}
