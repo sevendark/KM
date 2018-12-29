@@ -1,4 +1,4 @@
-# KM
+# knowledge management system
 知识库系统
 
 SpringBoot
