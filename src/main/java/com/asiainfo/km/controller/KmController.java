@@ -1,16 +1,14 @@
 package com.asiainfo.km.controller;
 
 import com.asiainfo.km.domain.DocInfo;
-import com.asiainfo.km.domain.redis.PathRedisInfo;
 import com.asiainfo.km.pojo.Folder;
 import com.asiainfo.km.pojo.KmErrorCode;
 import com.asiainfo.km.pojo.KmException;
 import com.asiainfo.km.pojo.KmResult;
 import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
-import com.asiainfo.km.service.PathService;
 import com.asiainfo.km.service.VcsService;
-import com.asiainfo.km.settings.SvnSettings;
+import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.OsFileUtil;
 import com.asiainfo.km.util.SVNLock;
@@ -45,15 +43,13 @@ public class KmController extends BaseController{
     private static final Logger logger = LoggerFactory.getLogger(KmController.class);
 
     private final VcsService vcsService;
-    private final SvnSettings svnSettings;
-    private final PathService pathService;
+    private final PathSettings pathSettings;
     private final DocRepoService docRepoService;
     private final BugService bugService;
 
-    public KmController(SvnSettings svnSettings, VcsService vcsService, PathService pathService, DocRepoService docRepoService, BugService bugService) {
-        this.svnSettings = svnSettings;
+    public KmController(PathSettings pathSettings, VcsService vcsService, DocRepoService docRepoService, BugService bugService) {
+        this.pathSettings = pathSettings;
         this.vcsService = vcsService;
-        this.pathService = pathService;
         this.docRepoService = docRepoService;
         this.bugService = bugService;
     }
@@ -67,7 +63,7 @@ public class KmController extends BaseController{
         }else{
             fileName$Path = fileName;
         }
-        File tempFile = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(), fileName$Path);
+        File tempFile = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(), fileName$Path);
         try {
             OsFileUtil.uploadFile(tempFile, uploadFile.getInputStream());
         } catch (IOException e) {
@@ -76,35 +72,21 @@ public class KmController extends BaseController{
         String md5 = getMd5(tempFile);
         DocInfo docInfo = docRepoService.getDocByMd5(md5);
         if(docInfo == null){
-            synchronized (SVNLock.LOCK) {
-                try {
-                    vcsService.login(getUsername(), getPassword());
-                    vcsService.addFile(new File[]{tempFile});
-                    vcsService.commit("文件上传");
-                }catch (KmException e) {
-                    //TODO 需要处理SVN异常
-                }
-            }
             docInfo = new DocInfo();
             docInfo.setCreateUser(getUsername());
             docInfo.setDocName(fileName);
             docInfo.setDocMime(uploadFile.getContentType());
+            docInfo.setPath(tempFile.getPath());
             if(bugId != null) {
                 docInfo.getBugList().add(bugService.getBugInfo(bugId));
             }
-            docInfo = docRepoService.saveDoc(docInfo);
-
-            PathRedisInfo pathInfo = new PathRedisInfo();
-            pathInfo.setValue(docInfo.getDocId().toString());
-            pathInfo.setKey(tempFile.getPath());
-            pathService.save(pathInfo);
-
+            docRepoService.saveDoc(docInfo);
         }else {
             boolean key =tempFile.delete();
             if(!key){
                 throw KmExceptionCreater.create(KmErrorCode.IO_ERROR);
             }
-            throw KmExceptionCreater.create("文件已存在,路径：" + pathService.getPath(docInfo.getDocId()) +  ", 文件名：" + docInfo.getDocName());
+            throw KmExceptionCreater.create("文件已存在,路径：" + docInfo.getPath() +  ", 文件名：" + docInfo.getDocName());
         }
         return new HashMap<>();
     }
@@ -116,13 +98,10 @@ public class KmController extends BaseController{
             DocInfo info = result.getData();
             try {
                 synchronized (SVNLock.LOCK) {
-                    vcsService.login(getUsername(), getPassword());
-                    File temp = new File(pathService.getPath(info.getDocId()));
+                    File temp = new File(info.getPath());
                     vcsService.deleteFile(temp);
-                    vcsService.commit("删除文件");
                 }
                 docRepoService.deleteDoc(info.getDocId());
-                pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
             } catch (KmException e) {
                 //TODO 需要处理SVN异常
             }
@@ -134,10 +113,6 @@ public class KmController extends BaseController{
     @GetMapping("getFolderList")
     public Folder getFolderList() throws Exception {
         Folder folder;
-        synchronized (SVNLock.LOCK) {
-            vcsService.login(getUsername(),getPassword());
-            vcsService.update();
-        }
         folder = docRepoService.getFolderList();
         return folder;
     }
@@ -147,20 +122,10 @@ public class KmController extends BaseController{
         Map<String,Object> result = new HashMap<>();
         Boolean key = false;
         String path$folderName = OsFileUtil.makeUp(path,folderName);
-        File newFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),path$folderName);
+        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path$folderName);
         if(newFolder.mkdir()){
             key = true;
-            synchronized (SVNLock.LOCK) {
-                try {
-                    vcsService.login(getUsername(), getPassword());
-                    vcsService.addFolder(new File[]{newFolder});
-                    vcsService.commit("创建文件夹");
-                } catch (KmException e) {
-                    key = false;
-                    //TODO 需要处理SVN异常
-                }
-                docRepoService.readPath();
-            }
+            docRepoService.readPath();
         }
         result.put("path",path);
         result.put("isSuccess",key);
@@ -169,12 +134,10 @@ public class KmController extends BaseController{
 
     @PostMapping("deleteFolder")
     public Boolean deleteFolder(String path) throws KmException {
-        File folder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),path);
+        File folder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path);
         synchronized (SVNLock.LOCK) {
             try {
-                vcsService.login(getUsername(), getPassword());
                 vcsService.deleteFile(folder);
-                vcsService.commit("删除文件夹");
             } catch (KmException e) {
                 //TODO 需要处理SVN异常
             }
@@ -191,13 +154,11 @@ public class KmController extends BaseController{
         }
         newName = oldName.substring(0,lastIndex) + newName;
 
-        File oldFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),oldName);
-        File newFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),newName);
+        File oldFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),oldName);
+        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),newName);
         synchronized (SVNLock.LOCK) {
             try {
-                vcsService.login(getUsername(), getPassword());
                 vcsService.move(oldFolder,newFolder);
-                vcsService.commit("重命名文件夹，旧名字:" + oldName);
             } catch (KmException e) {
                 //TODO 需要处理SVN异常
             }
@@ -209,14 +170,6 @@ public class KmController extends BaseController{
     @PostMapping("syncSVN")
     public Map<String, Object> syncSVN() throws KmException {
         Map<String, Object> map = new HashMap<>();
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.login(getUsername(), getPassword());
-                vcsService.update();
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-        }
         List<String> files = docRepoService.readPath();
         map.put("files", files);
         return map;
@@ -241,7 +194,7 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            File file = new File(pathService.getPath(info.getDocId()));
+            File file = new File(info.getPath());
             HttpHeaders headers = new HttpHeaders();
             String fileName;//为了解决中文名称乱码问题
             try {
@@ -266,13 +219,13 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            File file = new File(pathService.getPath(info.getDocId()));
+            File file = new File(info.getPath());
             FileInputStream ini = null; // 以byte流的方式打开文件
             OutputStream outi = null;
             try {
                 ini = new FileInputStream(file);
                 int i=ini.available(); //得到文件大小
-                byte data[]=new byte[i];
+                byte[] data = new byte[i];
                 ini.read(data);  //读数据
                 response.setContentType("image/*"); //设置返回的文件类型
                 outi = response.getOutputStream(); //得到向客户端输出二进制数据的对象

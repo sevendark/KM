@@ -11,4 +11,5 @@ import java.util.List;
  */
 public interface DocRepo extends JpaRepository<DocInfo,Long>, JpaSpecificationExecutor<DocInfo> {
     List<DocInfo> findByMsgDigest(String md5);
+    DocInfo findByPath(String path);
 }

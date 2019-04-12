@@ -1,11 +1,11 @@
 package com.asiainfo.km.service.impl;
 
+import com.asiainfo.km.domain.DocInfo;
 import com.asiainfo.km.domain.solr.DocSolrInfo;
 import com.asiainfo.km.pojo.*;
+import com.asiainfo.km.repository.DocRepo;
 import com.asiainfo.km.repository.solr.DocSolrRepo;
 import com.asiainfo.km.service.DocService;
-import com.asiainfo.km.service.PathService;
-import com.asiainfo.km.settings.SvnSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.KmResultCreater;
 import com.asiainfo.km.util.ParamUtil;
@@ -24,15 +24,13 @@ import java.io.IOException;
 @Service
 public class DocSvcSolrImp implements DocService<DocSolrInfo> {
     private final SolrClient solrClient;
-    private final SvnSettings svnSettings;
     private final DocSolrRepo docSolrRepo;
-    private final PathService pathService;
+    private final DocRepo docRepo;
 
-    public DocSvcSolrImp(SolrClient solrClient, SvnSettings svnSettings, DocSolrRepo docSolrRepo, PathService pathService) {
+    public DocSvcSolrImp(SolrClient solrClient, DocSolrRepo docSolrRepo, DocRepo docRepo) {
         this.solrClient = solrClient;
-        this.svnSettings = svnSettings;
         this.docSolrRepo = docSolrRepo;
-        this.pathService = pathService;
+        this.docRepo = docRepo;
     }
 
     @Override
@@ -50,9 +48,10 @@ public class DocSvcSolrImp implements DocService<DocSolrInfo> {
 
     @Override
     public DocSolrInfo saveDoc(DocSolrInfo info) throws KmException {
+        DocInfo docInfo = docRepo.findOne(info.getDocId());
         ContentStreamUpdateRequest up = new ContentStreamUpdateRequest("/update/extract");
         try {
-            up.addFile(new File(pathService.getPath(info.getDocId())),info.getDocMime());
+            up.addFile(new File(docInfo.getPath()),info.getDocMime());
         } catch (IOException e) {
             throw KmExceptionCreater.create(KmErrorCode.IO_ERROR);
         }

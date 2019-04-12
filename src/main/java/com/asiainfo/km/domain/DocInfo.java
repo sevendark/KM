@@ -21,6 +21,7 @@ public class DocInfo implements Serializable {
     @Lob
     private String docIntro;
     private String docMime;
+    private String path;
     private Integer searchTimes;
     private Integer docTimes;
     private String createUser;
@@ -77,6 +78,14 @@ public class DocInfo implements Serializable {
 
     public String getCreateUser() {
         return createUser;
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
     }
 
     public String getDocSize() {
