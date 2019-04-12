@@ -12,7 +12,7 @@ import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
 import com.asiainfo.km.service.DocService;
 import com.asiainfo.km.service.PathService;
-import com.asiainfo.km.settings.SvnSettings;
+import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,18 +42,16 @@ public class DocSvcRepoImp implements DocRepoService{
     private static final Logger logger = LoggerFactory.getLogger(DocSvcRepoImp.class);
     private final DocRepo docRepo;
     private final PathService pathService;
-    private final SvnSettings svnSettings;
-    private final VcsSvcSvnImp svnService;
+    private final PathSettings pathSettings;
     private final LogRepo logRepo;
     private final BugService bugService;
     private final DocService<DocSolrInfo> docSolrService;
 
     @Autowired
-    public DocSvcRepoImp(DocRepo docRepo, PathService pathService, SvnSettings svnSettings, VcsSvcSvnImp svnService, LogRepo logRepo, BugService bugService, DocService<DocSolrInfo> docSolrService) {
+    public DocSvcRepoImp(DocRepo docRepo, PathService pathService, PathSettings pathSettings, LogRepo logRepo, BugService bugService, DocService<DocSolrInfo> docSolrService) {
         this.docRepo = docRepo;
         this.pathService = pathService;
-        this.svnSettings = svnSettings;
-        this.svnService = svnService;
+        this.pathSettings = pathSettings;
         this.logRepo = logRepo;
         this.bugService = bugService;
         this.docSolrService = docSolrService;
@@ -198,7 +196,7 @@ public class DocSvcRepoImp implements DocRepoService{
 
     public List<String> readPath() throws KmException {
         List<String> files = new ArrayList<>();
-        readPath(OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),""),files);
+        readPath(OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),""),files);
         return files;
     }
 
@@ -234,7 +232,7 @@ public class DocSvcRepoImp implements DocRepoService{
 
     public Folder getFolderList() throws KmException {
         Folder root = new Folder();
-        getFolderList(new File(svnSettings.getLocalRoot()),root);
+        getFolderList(new File(pathSettings.getLocalRoot()),root);
         root.setPath("");
         return root;
     }
@@ -244,10 +242,10 @@ public class DocSvcRepoImp implements DocRepoService{
         String[] meSp;
         if(OSInfo.OSType.WINDOWS == OSInfo.getOSType()){
             meSp = mePath.split("\\\\");
-            me.setPath(mePath.replace(svnSettings.getLocalRoot() + "\\",""));
+            me.setPath(mePath.replace(pathSettings.getLocalRoot() + "\\",""));
         }else if(OSInfo.OSType.LINUX == OSInfo.getOSType()){
             meSp = mePath.split("/");
-            me.setPath(mePath.replace(svnSettings.getLocalRoot() + "/",""));
+            me.setPath(mePath.replace(pathSettings.getLocalRoot() + "/",""));
         }else{
             throw KmExceptionCreater.create("未知系统类型");
         }

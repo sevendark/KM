@@ -7,7 +7,7 @@ import com.asiainfo.km.pojo.TableParam;
 import com.asiainfo.km.pojo.TableResult;
 import com.asiainfo.km.service.DocRepoService;
 import com.asiainfo.km.service.DocService;
-import com.asiainfo.km.settings.SvnSettings;
+import com.asiainfo.km.settings.PathSettings;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,12 +19,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
  */
 @Controller
 public class DocController extends BaseController{
-    private final SvnSettings svnSettings;
+    private final PathSettings pathSettings;
     private final DocRepoService docRepoService;
     private final DocService<DocSolrInfo> docSolrService;
 
-    public DocController(SvnSettings svnSettings, DocRepoService docRepoService, DocService<DocSolrInfo> docSolrService) {
-        this.svnSettings = svnSettings;
+    public DocController(PathSettings pathSettings, DocRepoService docRepoService, DocService<DocSolrInfo> docSolrService) {
+        this.pathSettings = pathSettings;
         this.docRepoService = docRepoService;
         this.docSolrService = docSolrService;
     }
@@ -34,7 +34,7 @@ public class DocController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()) {
             model.addAttribute("doc", result.getData());
-            model.addAttribute("localRoot", svnSettings.getLocalRoot());
+            model.addAttribute("localRoot", pathSettings.getLocalRoot());
             return "docInfo";
         }else{
             return "redirect:index";

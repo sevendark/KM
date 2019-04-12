@@ -3,7 +3,6 @@ package com.asiainfo.km.service.impl;
 import com.asiainfo.km.domain.redis.PathRedisInfo;
 import com.asiainfo.km.repository.redis.PathRedisRepo;
 import com.asiainfo.km.service.PathService;
-import com.asiainfo.km.settings.SvnSettings;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +42,7 @@ public class PathSvcRedisImp implements PathService {
     }
 
     @Override
-    public void delete(String key) {
+    public void delete(PathRedisInfo folderRedis) {
         String id1 = folderRedis.getKey();
         String id2 = null;
         String path1 = folderRedis.getKey();

@@ -5,7 +5,6 @@ import com.asiainfo.km.pojo.*;
 import com.asiainfo.km.repository.solr.DocSolrRepo;
 import com.asiainfo.km.service.DocService;
 import com.asiainfo.km.service.PathService;
-import com.asiainfo.km.settings.SvnSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.KmResultCreater;
 import com.asiainfo.km.util.ParamUtil;
@@ -24,13 +23,11 @@ import java.io.IOException;
 @Service
 public class DocSvcSolrImp implements DocService<DocSolrInfo> {
     private final SolrClient solrClient;
-    private final SvnSettings svnSettings;
     private final DocSolrRepo docSolrRepo;
     private final PathService pathService;
 
-    public DocSvcSolrImp(SolrClient solrClient, SvnSettings svnSettings, DocSolrRepo docSolrRepo, PathService pathService) {
+    public DocSvcSolrImp(SolrClient solrClient, DocSolrRepo docSolrRepo, PathService pathService) {
         this.solrClient = solrClient;
-        this.svnSettings = svnSettings;
         this.docSolrRepo = docSolrRepo;
         this.pathService = pathService;
     }

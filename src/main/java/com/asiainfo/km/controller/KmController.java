@@ -9,11 +9,9 @@ import com.asiainfo.km.pojo.KmResult;
 import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
 import com.asiainfo.km.service.PathService;
-import com.asiainfo.km.service.VcsService;
-import com.asiainfo.km.settings.SvnSettings;
+import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.OsFileUtil;
-import com.asiainfo.km.util.SVNLock;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -44,15 +42,13 @@ import static com.asiainfo.km.util.OsFileUtil.*;
 public class KmController extends BaseController{
     private static final Logger logger = LoggerFactory.getLogger(KmController.class);
 
-    private final VcsService vcsService;
-    private final SvnSettings svnSettings;
+    private final PathSettings pathSettings;
     private final PathService pathService;
     private final DocRepoService docRepoService;
     private final BugService bugService;
 
-    public KmController(SvnSettings svnSettings, VcsService vcsService, PathService pathService, DocRepoService docRepoService, BugService bugService) {
-        this.svnSettings = svnSettings;
-        this.vcsService = vcsService;
+    public KmController(PathSettings pathSettings, PathService pathService, DocRepoService docRepoService, BugService bugService) {
+        this.pathSettings = pathSettings;
         this.pathService = pathService;
         this.docRepoService = docRepoService;
         this.bugService = bugService;
@@ -67,7 +63,7 @@ public class KmController extends BaseController{
         }else{
             fileName$Path = fileName;
         }
-        File tempFile = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(), fileName$Path);
+        File tempFile = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(), fileName$Path);
         try {
             OsFileUtil.uploadFile(tempFile, uploadFile.getInputStream());
         } catch (IOException e) {
@@ -76,15 +72,6 @@ public class KmController extends BaseController{
         String md5 = getMd5(tempFile);
         DocInfo docInfo = docRepoService.getDocByMd5(md5);
         if(docInfo == null){
-            synchronized (SVNLock.LOCK) {
-                try {
-                    vcsService.login(getUsername(), getPassword());
-                    vcsService.addFile(new File[]{tempFile});
-                    vcsService.commit("文件上传");
-                }catch (KmException e) {
-                    //TODO 需要处理SVN异常
-                }
-            }
             docInfo = new DocInfo();
             docInfo.setCreateUser(getUsername());
             docInfo.setDocName(fileName);
@@ -114,18 +101,8 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            try {
-                synchronized (SVNLock.LOCK) {
-                    vcsService.login(getUsername(), getPassword());
-                    File temp = new File(pathService.getPath(info.getDocId()));
-                    vcsService.deleteFile(temp);
-                    vcsService.commit("删除文件");
-                }
-                docRepoService.deleteDoc(info.getDocId());
-                pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
+            docRepoService.deleteDoc(info.getDocId());
+            pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
         }
 
         return new HashMap<>();
@@ -134,10 +111,6 @@ public class KmController extends BaseController{
     @GetMapping("getFolderList")
     public Folder getFolderList() throws Exception {
         Folder folder;
-        synchronized (SVNLock.LOCK) {
-            vcsService.login(getUsername(),getPassword());
-            vcsService.update();
-        }
         folder = docRepoService.getFolderList();
         return folder;
     }
@@ -147,20 +120,10 @@ public class KmController extends BaseController{
         Map<String,Object> result = new HashMap<>();
         Boolean key = false;
         String path$folderName = OsFileUtil.makeUp(path,folderName);
-        File newFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),path$folderName);
+        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path$folderName);
         if(newFolder.mkdir()){
             key = true;
-            synchronized (SVNLock.LOCK) {
-                try {
-                    vcsService.login(getUsername(), getPassword());
-                    vcsService.addFolder(new File[]{newFolder});
-                    vcsService.commit("创建文件夹");
-                } catch (KmException e) {
-                    key = false;
-                    //TODO 需要处理SVN异常
-                }
-                docRepoService.readPath();
-            }
+            docRepoService.readPath();
         }
         result.put("path",path);
         result.put("isSuccess",key);
@@ -169,17 +132,8 @@ public class KmController extends BaseController{
 
     @PostMapping("deleteFolder")
     public Boolean deleteFolder(String path) throws KmException {
-        File folder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),path);
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.login(getUsername(), getPassword());
-                vcsService.deleteFile(folder);
-                vcsService.commit("删除文件夹");
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-            docRepoService.readPath();
-        }
+        File folder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path);
+        docRepoService.readPath();
         return true;
     }
 
@@ -191,32 +145,15 @@ public class KmController extends BaseController{
         }
         newName = oldName.substring(0,lastIndex) + newName;
 
-        File oldFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),oldName);
-        File newFolder = OsFileUtil.newFileByOs(svnSettings.getLocalRoot(),newName);
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.login(getUsername(), getPassword());
-                vcsService.move(oldFolder,newFolder);
-                vcsService.commit("重命名文件夹，旧名字:" + oldName);
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-            docRepoService.readPath();
-        }
+        File oldFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),oldName);
+        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),newName);
+        docRepoService.readPath();
         return true;
     }
 
     @PostMapping("syncSVN")
     public Map<String, Object> syncSVN() throws KmException {
         Map<String, Object> map = new HashMap<>();
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.login(getUsername(), getPassword());
-                vcsService.update();
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-        }
         List<String> files = docRepoService.readPath();
         map.put("files", files);
         return map;
