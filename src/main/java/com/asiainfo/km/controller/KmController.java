@@ -1,14 +1,12 @@
 package com.asiainfo.km.controller;
 
 import com.asiainfo.km.domain.DocInfo;
-import com.asiainfo.km.domain.redis.PathRedisInfo;
 import com.asiainfo.km.pojo.Folder;
 import com.asiainfo.km.pojo.KmErrorCode;
 import com.asiainfo.km.pojo.KmException;
 import com.asiainfo.km.pojo.KmResult;
 import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
-import com.asiainfo.km.service.PathService;
 import com.asiainfo.km.service.VcsService;
 import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
@@ -46,14 +44,12 @@ public class KmController extends BaseController{
 
     private final VcsService vcsService;
     private final PathSettings pathSettings;
-    private final PathService pathService;
     private final DocRepoService docRepoService;
     private final BugService bugService;
 
-    public KmController(PathSettings pathSettings, VcsService vcsService, PathService pathService, DocRepoService docRepoService, BugService bugService) {
+    public KmController(PathSettings pathSettings, VcsService vcsService, DocRepoService docRepoService, BugService bugService) {
         this.pathSettings = pathSettings;
         this.vcsService = vcsService;
-        this.pathService = pathService;
         this.docRepoService = docRepoService;
         this.bugService = bugService;
     }
@@ -80,22 +76,17 @@ public class KmController extends BaseController{
             docInfo.setCreateUser(getUsername());
             docInfo.setDocName(fileName);
             docInfo.setDocMime(uploadFile.getContentType());
+            docInfo.setPath(tempFile.getPath());
             if(bugId != null) {
                 docInfo.getBugList().add(bugService.getBugInfo(bugId));
             }
-            docInfo = docRepoService.saveDoc(docInfo);
-
-            PathRedisInfo pathInfo = new PathRedisInfo();
-            pathInfo.setValue(docInfo.getDocId().toString());
-            pathInfo.setKey(tempFile.getPath());
-            pathService.save(pathInfo);
-
+            docRepoService.saveDoc(docInfo);
         }else {
             boolean key =tempFile.delete();
             if(!key){
                 throw KmExceptionCreater.create(KmErrorCode.IO_ERROR);
             }
-            throw KmExceptionCreater.create("文件已存在,路径：" + pathService.getPath(docInfo.getDocId()) +  ", 文件名：" + docInfo.getDocName());
+            throw KmExceptionCreater.create("文件已存在,路径：" + docInfo.getPath() +  ", 文件名：" + docInfo.getDocName());
         }
         return new HashMap<>();
     }
@@ -107,11 +98,10 @@ public class KmController extends BaseController{
             DocInfo info = result.getData();
             try {
                 synchronized (SVNLock.LOCK) {
-                    File temp = new File(pathService.getPath(info.getDocId()));
+                    File temp = new File(info.getPath());
                     vcsService.deleteFile(temp);
                 }
                 docRepoService.deleteDoc(info.getDocId());
-                pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
             } catch (KmException e) {
                 //TODO 需要处理SVN异常
             }
@@ -204,7 +194,7 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            File file = new File(pathService.getPath(info.getDocId()));
+            File file = new File(info.getPath());
             HttpHeaders headers = new HttpHeaders();
             String fileName;//为了解决中文名称乱码问题
             try {
@@ -229,13 +219,13 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            File file = new File(pathService.getPath(info.getDocId()));
+            File file = new File(info.getPath());
             FileInputStream ini = null; // 以byte流的方式打开文件
             OutputStream outi = null;
             try {
                 ini = new FileInputStream(file);
                 int i=ini.available(); //得到文件大小
-                byte data[]=new byte[i];
+                byte[] data = new byte[i];
                 ini.read(data);  //读数据
                 response.setContentType("image/*"); //设置返回的文件类型
                 outi = response.getOutputStream(); //得到向客户端输出二进制数据的对象
