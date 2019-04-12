@@ -103,7 +103,7 @@ $(document).ready( function () {
         add:{
             url:'addKind',
             data:{
-                father:'father',
+                father:'kindId',
                 kindName:'newName'
             },
             success:function (data) {
