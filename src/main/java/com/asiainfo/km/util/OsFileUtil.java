@@ -28,11 +28,15 @@ public class OsFileUtil {
     public static String getOsSplite(){
         if(OSInfo.OSType.WINDOWS == OSInfo.getOSType()){
             return "\\";
-        }else if(OSInfo.OSType.LINUX == OSInfo.getOSType()){
+        }else if(isLinux()){
             return "/" ;
         }else{
             throw new RuntimeException("未知系统类型");
         }
+    }
+
+    public static boolean isLinux(){
+        return OSInfo.getOSType().toString().startsWith("MAC") || OSInfo.OSType.LINUX == OSInfo.getOSType();
     }
 
     public static void uploadFile(File wcPath, InputStream is) throws KmException {

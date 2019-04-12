@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.asiainfo.km.util.OsFileUtil.getMd5;
+import static com.asiainfo.km.util.OsFileUtil.isLinux;
 
 /**
  * Created by jiyuze on 2017/8/3.
@@ -243,7 +244,7 @@ public class DocSvcRepoImp implements DocRepoService{
         if(OSInfo.OSType.WINDOWS == OSInfo.getOSType()){
             meSp = mePath.split("\\\\");
             me.setPath(mePath.replace(pathSettings.getLocalRoot() + "\\",""));
-        }else if(OSInfo.OSType.LINUX == OSInfo.getOSType()){
+        }else if(isLinux()){
             meSp = mePath.split("/");
             me.setPath(mePath.replace(pathSettings.getLocalRoot() + "/",""));
         }else{
