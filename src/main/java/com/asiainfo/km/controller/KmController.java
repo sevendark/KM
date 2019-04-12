@@ -9,9 +9,11 @@ import com.asiainfo.km.pojo.KmResult;
 import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
 import com.asiainfo.km.service.PathService;
+import com.asiainfo.km.service.VcsService;
 import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.OsFileUtil;
+import com.asiainfo.km.util.SVNLock;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -42,13 +44,15 @@ import static com.asiainfo.km.util.OsFileUtil.*;
 public class KmController extends BaseController{
     private static final Logger logger = LoggerFactory.getLogger(KmController.class);
 
+    private final VcsService vcsService;
     private final PathSettings pathSettings;
     private final PathService pathService;
     private final DocRepoService docRepoService;
     private final BugService bugService;
 
-    public KmController(PathSettings pathSettings, PathService pathService, DocRepoService docRepoService, BugService bugService) {
+    public KmController(PathSettings pathSettings, VcsService vcsService, PathService pathService, DocRepoService docRepoService, BugService bugService) {
         this.pathSettings = pathSettings;
+        this.vcsService = vcsService;
         this.pathService = pathService;
         this.docRepoService = docRepoService;
         this.bugService = bugService;
@@ -101,8 +105,16 @@ public class KmController extends BaseController{
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
         if(result.isSuccess()){
             DocInfo info = result.getData();
-            docRepoService.deleteDoc(info.getDocId());
-            pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
+            try {
+                synchronized (SVNLock.LOCK) {
+                    File temp = new File(pathService.getPath(info.getDocId()));
+                    vcsService.deleteFile(temp);
+                }
+                docRepoService.deleteDoc(info.getDocId());
+                pathService.delete(new PathRedisInfo(String.valueOf(docId),null));
+            } catch (KmException e) {
+                //TODO 需要处理SVN异常
+            }
         }
 
         return new HashMap<>();
@@ -133,7 +145,14 @@ public class KmController extends BaseController{
     @PostMapping("deleteFolder")
     public Boolean deleteFolder(String path) throws KmException {
         File folder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path);
-        docRepoService.readPath();
+        synchronized (SVNLock.LOCK) {
+            try {
+                vcsService.deleteFile(folder);
+            } catch (KmException e) {
+                //TODO 需要处理SVN异常
+            }
+            docRepoService.readPath();
+        }
         return true;
     }
 
@@ -147,7 +166,14 @@ public class KmController extends BaseController{
 
         File oldFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),oldName);
         File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),newName);
-        docRepoService.readPath();
+        synchronized (SVNLock.LOCK) {
+            try {
+                vcsService.move(oldFolder,newFolder);
+            } catch (KmException e) {
+                //TODO 需要处理SVN异常
+            }
+            docRepoService.readPath();
+        }
         return true;
     }
 
