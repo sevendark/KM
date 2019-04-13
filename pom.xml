@@ -6,7 +6,6 @@
     <groupId>com.sevendark</groupId>
     <artifactId>asiainfokm</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <packaging>war</packaging>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
