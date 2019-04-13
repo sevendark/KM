@@ -7,7 +7,6 @@ import com.asiainfo.km.pojo.KmException;
 import com.asiainfo.km.pojo.KmResult;
 import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
-import com.asiainfo.km.service.VcsService;
 import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.OsFileUtil;
@@ -44,14 +43,12 @@ import static com.asiainfo.km.util.OsFileUtil.*;
 public class KmController extends BaseController{
     private static final Logger logger = LoggerFactory.getLogger(KmController.class);
 
-    private final VcsService vcsService;
     private final PathSettings pathSettings;
     private final DocRepoService docRepoService;
     private final BugService bugService;
 
-    public KmController(PathSettings pathSettings, VcsService vcsService, DocRepoService docRepoService, BugService bugService) {
+    public KmController(PathSettings pathSettings, DocRepoService docRepoService, BugService bugService) {
         this.pathSettings = pathSettings;
-        this.vcsService = vcsService;
         this.docRepoService = docRepoService;
         this.bugService = bugService;
     }

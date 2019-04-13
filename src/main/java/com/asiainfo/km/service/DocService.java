@@ -1,10 +1,9 @@
 package com.asiainfo.km.service;
 
-import com.asiainfo.km.domain.DocInfo;
-import com.asiainfo.km.pojo.TableParam;
-import com.asiainfo.km.pojo.TableResult;
 import com.asiainfo.km.pojo.KmException;
 import com.asiainfo.km.pojo.KmResult;
+import com.asiainfo.km.pojo.TableParam;
+import com.asiainfo.km.pojo.TableResult;
 
 /**
  * Created by jiyuze on 2017/8/3.
