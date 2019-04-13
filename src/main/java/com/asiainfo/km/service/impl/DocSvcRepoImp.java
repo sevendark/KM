@@ -201,7 +201,7 @@ public class DocSvcRepoImp implements DocRepoService{
     public Folder getFolderList() throws KmException {
         Folder root = new Folder();
         getFolderList(new File(pathSettings.getLocalRoot()),root);
-        root.setPath("");
+        root.setPath(pathSettings.getLocalRoot());
         return root;
     }
 
