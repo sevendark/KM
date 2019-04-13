@@ -191,7 +191,7 @@ iniZtree=function (ztreeDom,settings) {
                 data:getDataField(settings.rename.data, treeNode),
                 async: false,
                 success:function (data) {
-                    settings.rename.success(data);
+                    settings.rename.success(data, treeNode);
                 }
             });
             if(ZtreeResults.renameResult === false){

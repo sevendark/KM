@@ -145,7 +145,7 @@ jQuery(document).ready( function () {
         remove:{
             url:'deleteFolder',
             data:{
-                folderName : 'path'
+                path : 'path'
             },
             success:function (data) {
                 ZtreeResults.removeResult = data;
@@ -171,14 +171,16 @@ jQuery(document).ready( function () {
         rename:{
             url:'renameFolder',
             data:{
-                oldName: 'path',
+                path: 'path',
+                oldName: 'name',
                 newName: 'newName'
             },
-            success:function (data) {
-                if(!data){
+            success:function (data, treeNode) {
+                if(!data.key){
                     Messager.showMsg("节点更新失败，可能存在同名文件夹。");
                 }
-                ZtreeResults.renameResult = data;
+                ZtreeResults.renameResult = data.key;
+                treeNode.path = data.path;
             }
         }
     };

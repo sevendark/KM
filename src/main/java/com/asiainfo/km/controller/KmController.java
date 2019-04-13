@@ -11,7 +11,6 @@ import com.asiainfo.km.service.VcsService;
 import com.asiainfo.km.settings.PathSettings;
 import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.OsFileUtil;
-import com.asiainfo.km.util.SVNLock;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -29,6 +28,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -97,13 +99,10 @@ public class KmController extends BaseController{
         if(result.isSuccess()){
             DocInfo info = result.getData();
             try {
-                synchronized (SVNLock.LOCK) {
-                    File temp = new File(info.getPath());
-                    vcsService.deleteFile(temp);
-                }
+                Files.deleteIfExists(Paths.get(info.getPath()));
                 docRepoService.deleteDoc(info.getDocId());
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
+            } catch (IOException e) {
+                logger.error("delete File error:", e.getLocalizedMessage());
             }
         }
 
@@ -118,14 +117,16 @@ public class KmController extends BaseController{
     }
 
     @PostMapping("addFolder")
-    public Map<String,Object> addFolder(String path, String folderName) throws KmException {
+    public Map<String,Object> addFolder(String path, String folderName) {
         Map<String,Object> result = new HashMap<>();
-        Boolean key = false;
+        boolean key = false;
         String path$folderName = OsFileUtil.makeUp(path,folderName);
-        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path$folderName);
-        if(newFolder.mkdir()){
+        Path newFolder = Paths.get(path$folderName);
+        try {
+            Files.createDirectory(newFolder);
             key = true;
-            docRepoService.readPath();
+        } catch (IOException e) {
+            logger.error("add folder error:", e.getLocalizedMessage());
         }
         result.put("path",path);
         result.put("isSuccess",key);
@@ -133,38 +134,33 @@ public class KmController extends BaseController{
     }
 
     @PostMapping("deleteFolder")
-    public Boolean deleteFolder(String path) throws KmException {
-        File folder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),path);
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.deleteFile(folder);
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-            docRepoService.readPath();
+    public Boolean deleteFolder(String path) {
+        Path path_d = Paths.get(path);
+        boolean key = false;
+        try {
+            Files.delete(path_d);
+            key = true;
+        } catch (IOException e) {
+            logger.error("delete folder error", e.getLocalizedMessage());
         }
-        return true;
+        return key;
     }
 
     @PostMapping("renameFolder")
-    public Boolean renameFolder(String oldName,String newName) throws KmException {
-        Integer lastIndex = oldName.lastIndexOf(OsFileUtil.getOsSplite());
-        if(lastIndex == -1){
-            lastIndex = 0;
+    public Map<String, Object> renameFolder(String path, String newName) {
+        Path oldFolder = Paths.get(path);
+        Path newFolder = oldFolder.getParent().resolve(newName);
+        boolean key = false;
+        try {
+            Files.move(oldFolder, newFolder);
+            key = true;
+        } catch (IOException e) {
+            logger.error("rename folder", e.getLocalizedMessage());
         }
-        newName = oldName.substring(0,lastIndex) + newName;
-
-        File oldFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),oldName);
-        File newFolder = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),newName);
-        synchronized (SVNLock.LOCK) {
-            try {
-                vcsService.move(oldFolder,newFolder);
-            } catch (KmException e) {
-                //TODO 需要处理SVN异常
-            }
-            docRepoService.readPath();
-        }
-        return true;
+        Map<String, Object> result = new HashMap<>();
+        result.put("key", key);
+        result.put("path", newFolder.toString());
+        return result;
     }
 
     @PostMapping("syncSVN")
