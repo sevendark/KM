@@ -11,7 +11,6 @@ import com.asiainfo.km.service.BugService;
 import com.asiainfo.km.service.DocRepoService;
 import com.asiainfo.km.service.DocService;
 import com.asiainfo.km.settings.PathSettings;
-import com.asiainfo.km.util.KmExceptionCreater;
 import com.asiainfo.km.util.KmResultCreater;
 import com.asiainfo.km.util.OsFileUtil;
 import org.slf4j.Logger;
@@ -19,23 +18,25 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import sun.awt.OSInfo;
 
 import javax.activation.MimetypesFileTypeMap;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.asiainfo.km.util.OsFileUtil.getMd5;
-import static com.asiainfo.km.util.OsFileUtil.isLinux;
 
 /**
  * Created by jiyuze on 2017/8/3.
  */
 @Service
 @Transactional
-public class DocSvcRepoImp implements DocRepoService{
+public class DocSvcRepoImp implements DocRepoService {
     private static final Logger logger = LoggerFactory.getLogger(DocSvcRepoImp.class);
     private final DocRepo docRepo;
     private final PathSettings pathSettings;
@@ -53,7 +54,7 @@ public class DocSvcRepoImp implements DocRepoService{
     }
 
     @Deprecated
-    public TableResult<DocInfo> getDocList4Table(TableParam param){
+    public TableResult<DocInfo> getDocList4Table(TableParam param) {
         throw new UnsupportedOperationException();
     }
 
@@ -83,26 +84,26 @@ public class DocSvcRepoImp implements DocRepoService{
         return docInfo;
     }
 
-    public KmResult<DocInfo> getOneDoc(Long docId){
+    public KmResult<DocInfo> getOneDoc(Long docId) {
         addSearchTimes(docId);
         DocInfo info = docRepo.findOne(docId);
-        if(info == null){
+        if (info == null) {
             return KmResultCreater.createError();
         }
         return KmResultCreater.createSuccess(info);
     }
 
-    public DocInfo getDocByMd5(String md5){
+    public DocInfo getDocByMd5(String md5) {
         List<DocInfo> list = docRepo.findByMsgDigest(md5);
-        if(list.size() == 0){
+        if (list.size() == 0) {
             return null;
         }
         return list.get(0);
     }
 
-    public void addSearchTimes(Long docId){
+    public void addSearchTimes(Long docId) {
         DocInfo info = docRepo.findOne(docId);
-        if(info!=null){
+        if (info != null) {
             info.setSearchTimes(info.getSearchTimes() + 1);
             docRepo.save(info);
         }
@@ -110,19 +111,19 @@ public class DocSvcRepoImp implements DocRepoService{
     }
 
     @Override
-    public void deleteDoc(Long docId){
+    public void deleteDoc(Long docId) {
         DocInfo info = docRepo.findOne(docId);
-        if(info!=null){
+        if (info != null) {
             docRepo.delete(info.getDocId());
             docSolrService.deleteDoc(docId);
         }
     }
 
-    public void removeDocBug(Long docId, Long bugId){
+    public void removeDocBug(Long docId, Long bugId) {
         DocInfo info = docRepo.findOne(docId);
         List<BugInfo> list = info.getBugList();
-        for (BugInfo e: list) {
-            if(e.getBugId().equals(bugId)){
+        for (BugInfo e : list) {
+            if (e.getBugId().equals(bugId)) {
                 list.remove(e);
                 docRepo.save(info);
                 return;
@@ -130,14 +131,15 @@ public class DocSvcRepoImp implements DocRepoService{
         }
     }
 
-    public void addDocBug(Long docId, Long bugId){
+    public void addDocBug(Long docId, Long bugId) {
         DocInfo info = docRepo.findOne(docId);
         BugInfo bugInfo = bugService.getBugInfo(bugId);
         info.getBugList().add(bugInfo);
 
     }
 
-    public Integer upTimes(Long docId, String user, String context){LogInfo log = new LogInfo();
+    public Integer upTimes(Long docId, String user, String context) {
+        LogInfo log = new LogInfo();
         log.setCreateTime(new Timestamp(System.currentTimeMillis()));
         log.setCreateUser(user);
         log.setLogContext(context);
@@ -150,7 +152,7 @@ public class DocSvcRepoImp implements DocRepoService{
         return doc.getDocTimes();
     }
 
-    public Integer subTimes(Long docId, String user, String context){
+    public Integer subTimes(Long docId, String user, String context) {
         LogInfo log = new LogInfo();
         log.setCreateTime(new Timestamp(System.currentTimeMillis()));
         log.setCreateUser(user);
@@ -158,7 +160,7 @@ public class DocSvcRepoImp implements DocRepoService{
         log.setValue(-1);
 
         DocInfo doc = docRepo.findOne(docId);
-        if( (doc.getDocTimes() - 1) >= 0){
+        if ((doc.getDocTimes() - 1) >= 0) {
             doc.setDocTimes(doc.getDocTimes() - 1);
             doc.getLogList().add(logRepo.save(log));
             docRepo.save(doc);
@@ -168,11 +170,11 @@ public class DocSvcRepoImp implements DocRepoService{
 
     public List<String> readPath() throws KmException {
         List<String> files = new ArrayList<>();
-        readPath(OsFileUtil.newFileByOs(pathSettings.getLocalRoot(),""),files);
+        readPath(OsFileUtil.newFileByOs(pathSettings.getLocalRoot(), ""), files);
         return files;
     }
 
-    public void readPath(File path,List<String> files) throws KmException {
+    public void readPath(File path, List<String> files) throws KmException {
         File[] list = path.listFiles();
         if (list != null) {
             for (File file$folder : list) {
@@ -184,9 +186,9 @@ public class DocSvcRepoImp implements DocRepoService{
                     String path$name = file$folder.getPath();
                     String type = new MimetypesFileTypeMap().getContentType(file$folder.getName());
                     DocInfo docInfo = docRepo.findByPath(path$name);
-                    if (docInfo==null) {
+                    if (docInfo == null) {
                         files.add(file$folder.getName());
-                        DocInfo info  = new DocInfo();
+                        DocInfo info = new DocInfo();
                         info.setDocMime(type);
                         info.setPath(path$name);
                         info.setDocName(file$folder.getName());
@@ -198,38 +200,27 @@ public class DocSvcRepoImp implements DocRepoService{
         }
     }
 
-    public Folder getFolderList() throws KmException {
+    public Folder getFolderList() {
         Folder root = new Folder();
-        getFolderList(new File(pathSettings.getLocalRoot()),root);
-        root.setPath(pathSettings.getLocalRoot());
+        getFolderList(Paths.get(pathSettings.getLocalRoot()), root);
         return root;
     }
 
-    public void getFolderList(File path,Folder me) throws KmException {
-        String mePath = path.getPath();
-        String[] meSp;
-        if(OSInfo.OSType.WINDOWS == OSInfo.getOSType()){
-            meSp = mePath.split("\\\\");
-            me.setPath(mePath.replace(pathSettings.getLocalRoot() + "\\",""));
-        }else if(isLinux()){
-            meSp = mePath.split("/");
-            me.setPath(mePath.replace(pathSettings.getLocalRoot() + "/",""));
-        }else{
-            throw KmExceptionCreater.create("未知系统类型");
-        }
-        me.setName(meSp[meSp.length - 1]);
-
-        File[] list = path.listFiles();
-        if (list != null) {
-            for (File aList : list) {
-                if (aList.isDirectory()) {
-                    if (!aList.getPath().contains(".svn")) {
+    private void getFolderList(Path path, Folder me) {
+        me.setPath(path.toString());
+        me.setName(path.getFileName().toString());
+        try {
+            Files.walk(path, 1)
+                    .filter(e -> Files.isDirectory(e))
+                    .filter(e -> !path.equals(e))
+                    .filter(e -> !e.getFileName().toString().startsWith("."))
+                    .forEach(e -> {
                         Folder child = new Folder();
                         me.getChildren().add(child);
-                        getFolderList(aList, child);
-                    }
-                }
-            }
+                        getFolderList(e, child);
+                    });
+        } catch (IOException e) {
+            logger.error("can't read folder list", e);
         }
     }
 

@@ -40,7 +40,7 @@ import static com.asiainfo.km.util.OsFileUtil.*;
  * Created by jiyuze on 2017/8/1.
  */
 @RestController
-public class KmController extends BaseController{
+public class KmController extends BaseController {
     private static final Logger logger = LoggerFactory.getLogger(KmController.class);
 
     private final PathSettings pathSettings;
@@ -54,12 +54,12 @@ public class KmController extends BaseController{
     }
 
     @PostMapping("uploadFile")
-    public Map<String,Object> uploadFile(String path, Long bugId, MultipartFile uploadFile) throws KmException {//TODO bugId 需要处理
+    public Map<String, Object> uploadFile(String path, Long bugId, MultipartFile uploadFile) throws KmException {//TODO bugId 需要处理
         String fileName = uploadFile.getOriginalFilename();
         String fileName$Path;
-        if(StringUtils.isNotBlank(path)){
+        if (StringUtils.isNotBlank(path)) {
             fileName$Path = makeUp(path, fileName);
-        }else{
+        } else {
             fileName$Path = fileName;
         }
         File tempFile = OsFileUtil.newFileByOs(pathSettings.getLocalRoot(), fileName$Path);
@@ -70,30 +70,30 @@ public class KmController extends BaseController{
         }
         String md5 = getMd5(tempFile);
         DocInfo docInfo = docRepoService.getDocByMd5(md5);
-        if(docInfo == null){
+        if (docInfo == null) {
             docInfo = new DocInfo();
             docInfo.setCreateUser(getUsername());
             docInfo.setDocName(fileName);
             docInfo.setDocMime(uploadFile.getContentType());
             docInfo.setPath(tempFile.getPath());
-            if(bugId != null) {
+            if (bugId != null) {
                 docInfo.getBugList().add(bugService.getBugInfo(bugId));
             }
             docRepoService.saveDoc(docInfo);
-        }else {
-            boolean key =tempFile.delete();
-            if(!key){
+        } else {
+            boolean key = tempFile.delete();
+            if (!key) {
                 throw KmExceptionCreater.create(KmErrorCode.IO_ERROR);
             }
-            throw KmExceptionCreater.create("文件已存在,路径：" + docInfo.getPath() +  ", 文件名：" + docInfo.getDocName());
+            throw KmExceptionCreater.create("文件已存在,路径：" + docInfo.getPath() + ", 文件名：" + docInfo.getDocName());
         }
         return new HashMap<>();
     }
 
     @PostMapping("deleteFile")
-    public Map<String,Object> deleteFile(Long docId){
+    public Map<String, Object> deleteFile(Long docId) {
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
-        if(result.isSuccess()){
+        if (result.isSuccess()) {
             DocInfo info = result.getData();
             try {
                 Files.deleteIfExists(Paths.get(info.getPath()));
@@ -107,26 +107,25 @@ public class KmController extends BaseController{
     }
 
     @GetMapping("getFolderList")
-    public Folder getFolderList() throws Exception {
+    public Folder getFolderList() {
         Folder folder;
         folder = docRepoService.getFolderList();
         return folder;
     }
 
     @PostMapping("addFolder")
-    public Map<String,Object> addFolder(String path, String folderName) {
-        Map<String,Object> result = new HashMap<>();
+    public Map<String, Object> addFolder(String path, String folderName) {
+        Map<String, Object> result = new HashMap<>();
         boolean key = false;
-        String path$folderName = OsFileUtil.makeUp(path,folderName);
-        Path newFolder = Paths.get(path$folderName);
+        Path newFolder = Paths.get(path).resolve(folderName);
         try {
             Files.createDirectory(newFolder);
             key = true;
         } catch (IOException e) {
             logger.error("add folder error:", e);
         }
-        result.put("path",path);
-        result.put("isSuccess",key);
+        result.put("path", newFolder.toString());
+        result.put("isSuccess", key);
         return result;
     }
 
@@ -169,14 +168,14 @@ public class KmController extends BaseController{
     }
 
     @ExceptionHandler(Exception.class)
-    public Map<String,Object> handleException(Exception ex) {
-        Map<String,Object> map = new HashMap<>();
-        if (ex instanceof MaxUploadSizeExceededException){
-            map.put("error","文件应不大于 "+
-                    getFileKB(((MaxUploadSizeExceededException)ex).getMaxUploadSize()));
-        } else{
+    public Map<String, Object> handleException(Exception ex) {
+        Map<String, Object> map = new HashMap<>();
+        if (ex instanceof MaxUploadSizeExceededException) {
+            map.put("error", "文件应不大于 " +
+                    getFileKB(((MaxUploadSizeExceededException) ex).getMaxUploadSize()));
+        } else {
             logger.error("文件上传错误", ex);
-            map.put("error","操作失败: " + ex.getMessage());
+            map.put("error", "操作失败: " + ex.getMessage());
         }
         return map;
 
@@ -185,17 +184,17 @@ public class KmController extends BaseController{
     @GetMapping("download")
     public ResponseEntity<byte[]> download(Long docId) throws KmException {
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
-        if(result.isSuccess()){
+        if (result.isSuccess()) {
             DocInfo info = result.getData();
             File file = new File(info.getPath());
             HttpHeaders headers = new HttpHeaders();
             String fileName;//为了解决中文名称乱码问题
             try {
-                fileName = new String(info.getDocName().getBytes("UTF-8"),"iso-8859-1");
+                fileName = new String(info.getDocName().getBytes("UTF-8"), "iso-8859-1");
             } catch (UnsupportedEncodingException e) {
                 throw KmExceptionCreater.create(KmErrorCode.OTHER);
             }
-            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" +fileName + "\"");
+            headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"");
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
             try {
                 return new ResponseEntity<>(FileUtils.readFileToByteArray(file), headers, HttpStatus.CREATED);
@@ -210,14 +209,14 @@ public class KmController extends BaseController{
     @GetMapping("getImage")
     public void getImage(Long docId, HttpServletResponse response) throws KmException {
         KmResult<DocInfo> result = docRepoService.getOneDoc(docId);
-        if(result.isSuccess()){
+        if (result.isSuccess()) {
             DocInfo info = result.getData();
             File file = new File(info.getPath());
             FileInputStream ini = null; // 以byte流的方式打开文件
             OutputStream outi = null;
             try {
                 ini = new FileInputStream(file);
-                int i=ini.available(); //得到文件大小
+                int i = ini.available(); //得到文件大小
                 byte[] data = new byte[i];
                 ini.read(data);  //读数据
                 response.setContentType("image/*"); //设置返回的文件类型
@@ -227,13 +226,13 @@ public class KmController extends BaseController{
                 throw KmExceptionCreater.create(KmErrorCode.OTHER);
             } catch (IOException e) {
                 throw KmExceptionCreater.create(KmErrorCode.IO_ERROR);
-            }finally {
+            } finally {
                 try {
-                    if(outi!=null){
+                    if (outi != null) {
                         outi.flush();
                         outi.close();
                     }
-                    if(ini!=null){
+                    if (ini != null) {
                         ini.close();
                     }
                 } catch (IOException e) {

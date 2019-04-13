@@ -23,9 +23,7 @@ public interface DocRepoService extends DocService<DocInfo> {
 
     void readPath(File path, List<String> files) throws KmException;
 
-    Folder getFolderList() throws KmException;
-
-    void getFolderList(File path,Folder me) throws KmException;
+    Folder getFolderList();
 
     DocInfo getDocByMd5(String md5);
 }
