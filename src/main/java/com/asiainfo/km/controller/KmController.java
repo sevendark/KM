@@ -99,7 +99,7 @@ public class KmController extends BaseController{
                 Files.deleteIfExists(Paths.get(info.getPath()));
                 docRepoService.deleteDoc(info.getDocId());
             } catch (IOException e) {
-                logger.error("delete File error:", e.getLocalizedMessage());
+                logger.error("delete File error:", e);
             }
         }
 
@@ -123,7 +123,7 @@ public class KmController extends BaseController{
             Files.createDirectory(newFolder);
             key = true;
         } catch (IOException e) {
-            logger.error("add folder error:", e.getLocalizedMessage());
+            logger.error("add folder error:", e);
         }
         result.put("path",path);
         result.put("isSuccess",key);
@@ -138,7 +138,7 @@ public class KmController extends BaseController{
             Files.delete(path_d);
             key = true;
         } catch (IOException e) {
-            logger.error("delete folder error", e.getLocalizedMessage());
+            logger.error("delete folder error", e);
         }
         return key;
     }
@@ -152,7 +152,7 @@ public class KmController extends BaseController{
             Files.move(oldFolder, newFolder);
             key = true;
         } catch (IOException e) {
-            logger.error("rename folder", e.getLocalizedMessage());
+            logger.error("rename folder", e);
         }
         Map<String, Object> result = new HashMap<>();
         result.put("key", key);
